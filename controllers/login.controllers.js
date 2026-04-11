@@ -1,4 +1,5 @@
 import {db_connect} from "../utils/db.js"
+import { hash } from "../utils/hash.js";
 
 export const login = async (req, res) => {
     const sql = db_connect();
@@ -8,13 +9,20 @@ export const login = async (req, res) => {
     const values = [username];
 
     const result = await sql.query(text, values);
-    console.log(result.row[0]);
 
-    if (result.rows[0]["password"] === password) {
+    if (result.rows.length === 0) {
+        return res.status(404).json({ isLogin: false, user: {} });
+    }
+
+    const salt = result.rows[0].password.substring(0, process.env.SALT_SIZE);
+    const hashed = hash(password, salt);
+    const salted_hashed = salt + hashed;
+    
+    console.log(result.rows[0]);
+
+    if (result.rows[0]["password"] === salted_hashed) {
         res.status(200).json({isLogin : true, user : result.rows[0]});
     } else {
         res.status(404).json({isLogin: false, user: {}});
     }
-
-    // req.send("post login");
 };
